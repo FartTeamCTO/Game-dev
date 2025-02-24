@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body { margin: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; }
-        canvas { max-width: 100%; max-height: 100%; }
+        canvas { width: 100%; height: 100%; object-fit: contain; }
     </style>
 </head>
 <body>
@@ -54,27 +54,17 @@
             let w = window.innerWidth;
             let h = window.innerHeight;
             if (w / h > aspect) {
-                h = window.innerHeight;
-                w = h * aspect;
+                canvas.width = h * aspect;
+                canvas.height = h;
             } else {
-                w = window.innerWidth;
-                h = w / aspect;
+                canvas.width = w;
+                canvas.height = w / aspect;
             }
-            canvas.width = DESIGN_WIDTH;
-            canvas.height = DESIGN_HEIGHT;
-            canvas.style.width = `${w}px`;
-            canvas.style.height = `${h}px`;
-            scale = w / DESIGN_WIDTH;
+            scale = canvas.width / DESIGN_WIDTH;
+            ctx.scale(scale, scale);
         }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
-
-        // Fullscreen Toggle
-        canvas.addEventListener('dblclick', () => {
-            if (!document.fullscreenElement) {
-                canvas.requestFullscreen().catch(err => console.log(err));
-            }
-        });
 
         // Start Game
         function startGame() {
@@ -99,6 +89,9 @@
         function fart() {
             if (!gameStarted) {
                 gameStarted = true;
+                if (!document.fullscreenElement) {
+                    canvas.requestFullscreen().catch(err => console.log(err));
+                }
             }
             player.vy = rapidFire ? -8 : fartBoost;
             player.jumping = true;
@@ -139,12 +132,12 @@
             if (type === 'goldenTP') lastGoldenTPSpawn = now;
         }
 
-        // Game Loop with Delta Time
+        // Game Loop
         function gameLoop(currentTime) {
-            const deltaTime = (currentTime - lastTime) / 1000; // Seconds
+            const deltaTime = (currentTime - lastTime) / 1000;
             lastTime = currentTime;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
             ctx.drawImage(backgroundImg, 0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
 
             if (!gameStarted) {
@@ -163,9 +156,9 @@
                     hasPlayedGameOverSound = true;
                 }
             } else {
-                // Player Physics with Delta Time
-                player.vy += gravity * deltaTime * 60; // Normalized to 60fps
-                player.y += player.vy * deltaTime * 60;
+                // Player Physics (5% faster)
+                player.vy += gravity * deltaTime * 63;
+                player.y += player.vy * deltaTime * 63;
                 if (player.y + player.height > DESIGN_HEIGHT + 100) {
                     gameOver = true;
                     if (!hasPlayedGameOverSound) {
@@ -178,14 +171,14 @@
                 const playerImg = player.jumping ? playerJumpImg : playerIdleImg;
                 if (player.puffTimer > 0) {
                     ctx.drawImage(fartPuffImg, player.x - 80, player.y, 80, 80);
-                    player.puffTimer -= deltaTime * 60;
+                    player.puffTimer -= deltaTime * 63;
                 }
                 ctx.drawImage(playerImg, player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
 
                 // Obstacles
                 for (let i = obstacles.length - 1; i >= 0; i--) {
                     let obs = obstacles[i];
-                    obs.x -= 3 * deltaTime * 60;
+                    obs.x -= 3 * deltaTime * 63;
 
                     let img = obs.type === 0 ? toiletPaperImg : obs.type === 1 ? gasMaskImg : airFreshenerImg;
                     ctx.drawImage(img, obs.x, obs.y, obs.width, obs.height);
@@ -208,7 +201,7 @@
                     }
 
                     // Air Freshener Slow Effect
-                    if (obs.type === 2 && Math.abs(player.x - obs.x) < 200) player.vy += 0.1 * deltaTime * 60;
+                    if (obs.type === 2 && Math.abs(player.x - obs.x) < 200) player.vy += 0.1 * deltaTime * 63;
 
                     // Score
                     if (!obs.passed && obs.x + obs.width < player.x) {
@@ -222,7 +215,7 @@
                 // Power-Ups
                 for (let i = powerUps.length - 1; i >= 0; i--) {
                     let pu = powerUps[i];
-                    pu.x -= 3 * deltaTime * 60;
+                    pu.x -= 3 * deltaTime * 63;
                     let puImg = pu.type === 'spicyBean' ? spicyBeanImg : goldenTPImg;
                     ctx.drawImage(puImg, pu.x - pu.width / 2, pu.y - pu.height / 2, pu.width, pu.height);
 
@@ -250,9 +243,9 @@
                     spawnPowerUp();
                 }
 
-                // Boost Timer (Unused)
+                // Boost Timer
                 if (boostTimer > 0) {
-                    boostTimer -= deltaTime * 60;
+                    boostTimer -= deltaTime * 63;
                     if (boostTimer <= 0) fartBoost = -12;
                 }
 
