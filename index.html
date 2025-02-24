@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Fart Flap 💨</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         canvas { border: 1px solid black; }
         body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
@@ -36,11 +37,12 @@
         let powerUps = [];
         let score = 0;
         let gameOver = false;
+        let gameStarted = false;
         let invincible = false;
         let rapidFire = false;
         let boostTimer = 0;
         let hasPlayedGameOverSound = false;
-        let lastGoldenTPSpawn = -10000; // Timestamp for cooldown
+        let lastGoldenTPSpawn = -10000;
 
         // Start Game
         function startGame() {
@@ -48,6 +50,7 @@
             powerUps = [];
             score = 0;
             gameOver = false;
+            gameStarted = false;
             invincible = false;
             rapidFire = false;
             boostTimer = 0;
@@ -62,7 +65,12 @@
 
         // Player Movement
         function fart() {
-            player.vy = rapidFire ? -8 : fartBoost;
+            if (!gameStarted) {
+                gameStarted = true;
+                player.vy = fartBoost;
+            } else {
+                player.vy = rapidFire ? -8 : fartBoost;
+            }
             player.jumping = true;
             player.puffTimer = 15;
             fartSound.play();
@@ -90,7 +98,7 @@
         // Power-Up Spawning
         function spawnPowerUp() {
             const now = Date.now();
-            let type = Math.random() < 0.2 && (now - lastGoldenTPSpawn > 10000) ? 'goldenTP' : 'spicyBean'; // 20% chance, 10s cooldown
+            let type = Math.random() < 0.2 && (now - lastGoldenTPSpawn > 10000) ? 'goldenTP' : 'spicyBean';
             powerUps.push({
                 x: canvas.width + 500,
                 y: Math.random() * (canvas.height - 150) + 75,
@@ -103,21 +111,29 @@
 
         // Game Loop
         function gameLoop() {
+            ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+
+            if (!gameStarted) {
+                ctx.fillStyle = 'white';
+                ctx.font = '40px Arial';
+                ctx.fillText('Tap to Start', 520, 360);
+                ctx.drawImage(playerImg, player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
             if (gameOver) {
                 ctx.drawImage(gameOverImg, 0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = 'white';
                 ctx.font = '40px Arial';
                 ctx.fillText(`Score: ${score}`, 540, 340);
-                ctx.fillText('Click to Retry', 520, 400);
+                ctx.fillText('Tap to Retry', 520, 400);
                 if (!hasPlayedGameOverSound) {
                     gameOverSound.play();
                     hasPlayedGameOverSound = true;
                 }
                 return;
             }
-
-            // Draw Background
-            ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
 
             // Player Physics
             player.vy += gravity;
@@ -202,7 +218,7 @@
             if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 600) {
                 spawnObstacle();
             }
-            if (powerUps.length === 0 || powerUps[powerUps.length - 1].x < canvas.width - 1200) { // Wider spawn gap
+            if (powerUps.length === 0 || powerUps[powerUps.length - 1].x < canvas.width - 1200) {
                 spawnPowerUp();
             }
 
@@ -220,7 +236,14 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Event Listeners
+        // Event Listener for Mobile
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Stop zooming
+            if (gameOver) startGame();
+            else fart();
+        }, { passive: false });
+
+        // Fallback for Desktop
         canvas.addEventListener('click', () => {
             if (gameOver) startGame();
             else fart();
