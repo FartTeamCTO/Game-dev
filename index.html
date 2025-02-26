@@ -3,6 +3,7 @@
 <head>
     <title>Fart Flap 💨</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; }
         canvas { width: 100%; height: 100%; object-fit: contain; }
@@ -38,6 +39,8 @@
         let powerUps = [];
         let score = 0;
         let lastScore = 0;
+        let clickCount = 0;
+        let totalClicks = parseInt(localStorage.getItem('totalClicks')) || 0;
         let personalScores = JSON.parse(localStorage.getItem('personalScores')) || [];
         let gameOver = false;
         let gameStarted = false;
@@ -71,6 +74,7 @@
             obstacles = [];
             powerUps = [];
             score = 0;
+            clickCount = 0;
             gameOver = false;
             gameStarted = false;
             invincible = false;
@@ -97,6 +101,9 @@
             player.jumping = true;
             player.puffTimer = 15;
             fartSound.play();
+            clickCount++;
+            totalClicks++;
+            localStorage.setItem('totalClicks', totalClicks);
             setTimeout(() => player.jumping = false, rapidFire ? 100 : 200);
         }
 
@@ -159,16 +166,18 @@
 
             if (!gameStarted) {
                 ctx.fillStyle = 'black';
-                ctx.font = 'bold 40px Comic Sans MS';
+                ctx.font = 'bold 40px Bangers';
                 ctx.fillText('Tap to Start', 520, 360);
                 ctx.drawImage(playerIdleImg, player.x - 61, player.y - 61, 128, 128);
             } else if (gameOver) {
                 ctx.drawImage(gameOverImg, 0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
                 ctx.fillStyle = 'black';
-                ctx.font = 'bold 30px Comic Sans MS';
+                ctx.font = 'bold 30px Bangers';
                 ctx.textAlign = 'center';
                 ctx.fillText(`Score: ${score}`, 306, 465);
                 ctx.fillText(`Last Score: ${lastScore}`, 306, 505);
+                ctx.fillText(`Clicks: ${clickCount}`, 306, 585);
+                ctx.fillText(`Total Clicks: ${totalClicks}`, 306, 625);
                 ctx.fillText('Tap to Retry', 640, 430);
                 ctx.fillText('Top 5 Scores:', 974, 465);
                 for (let i = 0; i < personalScores.length; i++) {
@@ -204,7 +213,7 @@
                 // Obstacles
                 for (let i = obstacles.length - 1; i >= 0; i--) {
                     let obs = obstacles[i];
-                    obs.x -= 3 * deltaTime * 63;
+                    obs.x -= 3.9 * deltaTime * 63;
                     obs.imgTopX = obs.x - 18;
                     obs.imgBottomX = obs.x - 14;
                     obs.imgBottomY = obs.y + 583;
@@ -247,7 +256,7 @@
                 // Power-Ups
                 for (let i = powerUps.length - 1; i >= 0; i--) {
                     let pu = powerUps[i];
-                    pu.x -= 3 * deltaTime * 63;
+                    pu.x -= 3.9 * deltaTime * 63;
                     let puImg = pu.type === 'spicyBean' ? spicyBeanImg : goldenTPImg;
                     ctx.drawImage(puImg, pu.x - pu.width / 2, pu.y - pu.height / 2, pu.width, pu.height);
 
@@ -281,11 +290,14 @@
                     if (boostTimer <= 0) fartBoost = -12;
                 }
 
-                // Draw Score
+                // Draw Score and Clicks
                 ctx.fillStyle = 'black';
-                ctx.font = 'bold 30px Comic Sans MS';
+                ctx.font = 'bold 30px Bangers';
                 ctx.fillText(`Score: ${score}`, 20, 40);
                 ctx.fillText(`Last: ${lastScore}`, 20, 70);
+                ctx.textAlign = 'right';
+                ctx.fillText(`Clicks: ${clickCount}`, DESIGN_WIDTH - 20, 40);
+                ctx.textAlign = 'left';
             }
 
             requestAnimationFrame(gameLoop);
