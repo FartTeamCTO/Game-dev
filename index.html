@@ -31,7 +31,7 @@
         const DESIGN_WIDTH = 1280;
         const DESIGN_HEIGHT = 720;
         let scale = 1;
-        let player = { x: 200, y: 360, vy: 0, width: 80, height: 112, jumping: false, puffTimer: 0 };
+        let player = { x: 200, y: 360, vy: 0, width: 75, height: 107, jumping: false, puffTimer: 0 };
         let gravity = 0.5;
         let fartBoost = -12;
         let obstacles = [];
@@ -78,7 +78,7 @@
             boostTimer = 0;
             hasPlayedGameOverSound = false;
             lastGoldenTPSpawn = -10000;
-            player = { x: 200, y: 360, vy: 0, width: 80, height: 112, jumping: false, puffTimer: 0 };
+            player = { x: 200, y: 360, vy: 0, width: 75, height: 107, jumping: false, puffTimer: 0 };
             spawnObstacle();
             spawnPowerUp();
             lastTime = performance.now();
@@ -102,12 +102,12 @@
 
         // Obstacle Spawning
         function spawnObstacle() {
-            const gap = 300; // Back to 300px
+            const gap = 310;
             const width = 160;
             const height = 300;
             const hitboxHeight = height * 0.8 * 1.2; // 288px
-            const minY = -156; // Adjusted for 300px gap (720 - 588 = 132, 132 - 196 = -64)
-            const maxY = 40; // 40px buffer from bottom
+            const minY = -161;
+            const maxY = 35;
             const yPos = Math.random() * (maxY - minY) + minY;
 
             obstacles.push({
@@ -118,10 +118,10 @@
                 gap: gap,
                 hitboxWidth: width * 0.8,
                 hitboxHeight: hitboxHeight,
-                imgTopX: DESIGN_WIDTH - 16,
-                imgTopY: yPos + 240 - 250,
-                imgBottomX: DESIGN_WIDTH - 16,
-                imgBottomY: yPos + hitboxHeight + gap,
+                imgTopX: DESIGN_WIDTH - 18, // Moved 2px left
+                imgTopY: yPos - 3, // Moved 3px up
+                imgBottomX: DESIGN_WIDTH - 14, // Moved 2px right
+                imgBottomY: yPos + 583, // Moved 5px down
                 type: Math.floor(Math.random() * 3),
                 passed: false
             });
@@ -161,7 +161,9 @@
                 ctx.fillStyle = 'black';
                 ctx.font = 'bold 40px Comic Sans MS';
                 ctx.fillText('Tap to Start', 520, 360);
-                ctx.drawImage(playerIdleImg, player.x - 64, player.y - 64, 128, 128);
+                ctx.drawImage(playerIdleImg, player.x - 61, player.y - 61, 128, 128); // Moved 2px left/up
+                ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
+                ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
             } else if (gameOver) {
                 ctx.drawImage(gameOverImg, 0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
                 ctx.fillStyle = 'black';
@@ -199,31 +201,37 @@
                     ctx.drawImage(fartPuffImg, player.x - 80, player.y, 80, 80);
                     player.puffTimer -= deltaTime * 63;
                 }
-                ctx.drawImage(playerImg, player.x - 64, player.y - 64, 128, 128);
+                ctx.drawImage(playerImg, player.x - 61, player.y - 61, 128, 128); // Moved 2px left/up
+                ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
+                ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
 
                 // Obstacles
                 for (let i = obstacles.length - 1; i >= 0; i--) {
                     let obs = obstacles[i];
                     obs.x -= 3 * deltaTime * 63;
-                    obs.imgTopX = obs.x - 16;
-                    obs.imgBottomX = obs.x - 16;
-                    obs.imgBottomY = obs.y + obs.hitboxHeight + obs.gap;
+                    obs.imgTopX = obs.x - 18; // Moved 2px left
+                    obs.imgBottomX = obs.x - 14; // Moved 2px right
+                    obs.imgBottomY = obs.y + 583; // Moved 5px down
 
                     ctx.save();
-                    ctx.translate(obs.imgTopX + obs.width / 2, obs.y + 240 - 250);
+                    ctx.translate(obs.imgTopX + obs.width / 2, obs.y - 3); // Moved 3px up
                     ctx.rotate(Math.PI);
                     ctx.drawImage(magicalPillarImg, -obs.width / 2, -obs.height, obs.width, obs.height);
                     ctx.restore();
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    ctx.fillRect(obs.x, obs.y - 5, obs.hitboxWidth, obs.hitboxHeight);
 
                     ctx.save();
                     ctx.drawImage(magicalPillarImg, obs.imgBottomX, obs.imgBottomY, obs.width, obs.height);
                     ctx.restore();
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    ctx.fillRect(obs.x, obs.y + obs.hitboxHeight + obs.gap, obs.hitboxWidth, obs.hitboxHeight);
 
                     if (!invincible && (
                         (player.x + player.width / 2 > obs.x &&
                          player.x - player.width / 2 < obs.x + obs.hitboxWidth &&
-                        (player.y - player.height / 2 < obs.y + obs.hitboxHeight ||
-                         player.y + player.height / 2 > obs.imgBottomY))
+                        (player.y - player.height / 2 < obs.y - 5 + obs.hitboxHeight ||
+                         player.y + player.height / 2 > obs.y + obs.hitboxHeight + obs.gap))
                     )) {
                         lastScore = score;
                         updatePersonalScores();
