@@ -3,10 +3,11 @@
 <head>
     <title>Fart Flap 💨</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Chewy&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; }
         canvas { width: 100%; height: 100%; object-fit: contain; }
+        canvas { letter-spacing: 2px; }
     </style>
 </head>
 <body>
@@ -40,7 +41,7 @@
         let score = 0;
         let lastScore = 0;
         let clickCount = 0;
-        let totalClicks = parseInt(localStorage.getItem('totalClicks')) || 0;
+        let totalFarts = parseInt(localStorage.getItem('totalFarts')) || 0;
         let personalScores = JSON.parse(localStorage.getItem('personalScores')) || [];
         let gameOver = false;
         let gameStarted = false;
@@ -50,6 +51,10 @@
         let hasPlayedGameOverSound = false;
         let lastGoldenTPSpawn = -10000;
         let lastTime = 0;
+        let isPressing = false;
+        let pressTimer = 0;
+        let lastFartSound = 0;
+        let lastGapY = 0; // Track last gap position
 
         // Resize Canvas
         function resizeCanvas() {
@@ -82,6 +87,7 @@
             boostTimer = 0;
             hasPlayedGameOverSound = false;
             lastGoldenTPSpawn = -10000;
+            lastGapY = 0; // Reset gap tracker
             player = { x: 200, y: 360, vy: 0, width: 75, height: 107, jumping: false, puffTimer: 0 };
             spawnObstacle();
             spawnPowerUp();
@@ -100,22 +106,34 @@
             player.vy = rapidFire ? -8 : fartBoost;
             player.jumping = true;
             player.puffTimer = 15;
+            fartSound.pause();
+            fartSound.currentTime = 0;
             fartSound.play();
             clickCount++;
-            totalClicks++;
-            localStorage.setItem('totalClicks', totalClicks);
-            setTimeout(() => player.jumping = false, rapidFire ? 100 : 200);
+            totalFarts++;
+            localStorage.setItem('totalFarts', totalFarts);
+            lastFartSound = performance.now();
+            setTimeout(() => { if (!isPressing) player.jumping = false; }, rapidFire ? 100 : 200);
         }
 
-        // Obstacle Spawning
+        // Obstacle Spawning with Dynamic Gaps
         function spawnObstacle() {
             const gap = 310;
             const width = 160;
             const height = 300;
-            const hitboxHeight = height * 0.8 * 1.2; // 288px
+            const hitboxHeight = height * 0.8 * 1.2;
             const minY = -161;
             const maxY = 35;
-            const yPos = Math.random() * (maxY - minY) + minY;
+            let yPos;
+            // Nudge gap away from last position
+            if (lastGapY < -63) { // Last was high, lean lower
+                yPos = Math.random() * (maxY - (-63)) + (-63); // -63 to 35
+            } else if (lastGapY > -63) { // Last was low, lean higher
+                yPos = Math.random() * ((-63) - minY) + minY; // -161 to -63
+            } else { // Last was middle, go either way
+                yPos = Math.random() * (maxY - minY) + minY; // Full range
+            }
+            lastGapY = yPos; // Update last position
 
             obstacles.push({
                 x: DESIGN_WIDTH,
@@ -165,25 +183,39 @@
             ctx.drawImage(backgroundImg, 0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
 
             if (!gameStarted) {
-                ctx.fillStyle = 'black';
-                ctx.font = 'bold 40px Bangers';
-                ctx.fillText('Tap to Start', 520, 360);
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 4;
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 40px Chewy';
+                ctx.textAlign = 'center';
+                ctx.strokeText('Tap to Start', 640, 360);
+                ctx.fillText('Tap to Start', 640, 360);
+                ctx.textAlign = 'left';
                 ctx.drawImage(playerIdleImg, player.x - 61, player.y - 61, 128, 128);
             } else if (gameOver) {
                 ctx.drawImage(gameOverImg, 0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
-                ctx.fillStyle = 'black';
-                ctx.font = 'bold 30px Bangers';
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 4;
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 30px Chewy';
                 ctx.textAlign = 'center';
+                ctx.strokeText(`Score: ${score}`, 306, 465);
                 ctx.fillText(`Score: ${score}`, 306, 465);
+                ctx.strokeText(`Last Score: ${lastScore}`, 306, 505);
                 ctx.fillText(`Last Score: ${lastScore}`, 306, 505);
-                ctx.fillText(`Clicks: ${clickCount}`, 306, 585);
-                ctx.fillText(`Total Clicks: ${totalClicks}`, 306, 625);
+                ctx.strokeText(`Farts: ${clickCount}`, 306, 585);
+                ctx.fillText(`Farts: ${clickCount}`, 306, 585);
+                ctx.strokeText(`Total Farts: ${totalFarts}`, 306, 625);
+                ctx.fillText(`Total Farts: ${totalFarts}`, 306, 625);
+                ctx.strokeText('Tap to Retry', 640, 430);
                 ctx.fillText('Tap to Retry', 640, 430);
+                ctx.strokeText('Top 5 Scores:', 974, 465);
                 ctx.fillText('Top 5 Scores:', 974, 465);
-                for (let i = 0; i < personalScores.length; i++) {
-                    ctx.fillText(`${i + 1}. ${personalScores[i]}`, 974, 505 + i * 40);
-                }
                 ctx.textAlign = 'left';
+                for (let i = 0; i < personalScores.length; i++) {
+                    ctx.strokeText(`${i + 1}. ${personalScores[i]}`, 924, 505 + i * 40);
+                    ctx.fillText(`${i + 1}. ${personalScores[i]}`, 924, 505 + i * 40);
+                }
                 if (!hasPlayedGameOverSound) {
                     gameOverSound.play();
                     hasPlayedGameOverSound = true;
@@ -191,6 +223,23 @@
             } else {
                 // Player Physics
                 player.vy += gravity * deltaTime * 63;
+                if (isPressing) {
+                    pressTimer += deltaTime * 63;
+                    if (pressTimer > 10) {
+                        player.vy = -6;
+                        player.jumping = true;
+                        player.puffTimer = 15;
+                        if (currentTime - lastFartSound > 250) {
+                            fartSound.pause();
+                            fartSound.currentTime = 0;
+                            fartSound.play();
+                            clickCount++;
+                            totalFarts++;
+                            localStorage.setItem('totalFarts', totalFarts);
+                            lastFartSound = currentTime;
+                        }
+                    }
+                }
                 player.y += player.vy * deltaTime * 63;
                 if (player.y + player.height > DESIGN_HEIGHT + 100) {
                     lastScore = score;
@@ -201,6 +250,7 @@
                         hasPlayedGameOverSound = true;
                     }
                 }
+                if (player.y < -player.height) player.y = -player.height;
 
                 // Draw Player & Fart Puff
                 const playerImg = player.jumping ? playerJumpImg : playerIdleImg;
@@ -264,20 +314,21 @@
                         powerUpSound.play();
                         if (pu.type === 'spicyBean') {
                             rapidFire = true;
+                            score += 5; // Fixed
                             setTimeout(() => rapidFire = false, 5000);
-                        } else {
+                        } else if (pu.type === 'goldenTP') {
                             invincible = true;
-                            setTimeout(() => invincible = false, 3000);
+                            score += 7;
+                            setTimeout(() => invincible = false, 4000);
                         }
                         powerUps.splice(i, 1);
-                        score += 5;
                     }
 
                     if (pu.x < -pu.width) powerUps.splice(i, 1);
                 }
 
                 // Spawn Logic
-                if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < DESIGN_WIDTH - 600) {
+                if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < DESIGN_WIDTH - 600) { // Reverted
                     spawnObstacle();
                 }
                 if (powerUps.length === 0 || powerUps[powerUps.length - 1].x < DESIGN_WIDTH - 1200) {
@@ -290,30 +341,51 @@
                     if (boostTimer <= 0) fartBoost = -12;
                 }
 
-                // Draw Score and Clicks
-                ctx.fillStyle = 'black';
-                ctx.font = 'bold 30px Bangers';
+                // Draw Score and Farts
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 4;
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 30px Chewy';
+                ctx.textAlign = 'left';
+                ctx.strokeText(`Score: ${score}`, 20, 40);
                 ctx.fillText(`Score: ${score}`, 20, 40);
+                ctx.strokeText(`Last: ${lastScore}`, 20, 70);
                 ctx.fillText(`Last: ${lastScore}`, 20, 70);
                 ctx.textAlign = 'right';
-                ctx.fillText(`Clicks: ${clickCount}`, DESIGN_WIDTH - 20, 40);
+                ctx.strokeText(`Farts: ${clickCount}`, DESIGN_WIDTH - 50, 40);
+                ctx.fillText(`Farts: ${clickCount}`, DESIGN_WIDTH - 50, 40);
                 ctx.textAlign = 'left';
             }
 
             requestAnimationFrame(gameLoop);
         }
 
-        // Event Listener for Mobile
+        // Event Listeners
+        canvas.addEventListener('mousedown', () => {
+            if (gameOver) startGame();
+            else {
+                isPressing = true;
+                fart();
+            }
+        });
+        canvas.addEventListener('mouseup', () => {
+            isPressing = false;
+            pressTimer = 0;
+            player.jumping = false;
+        });
+
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (gameOver) startGame();
-            else fart();
+            else {
+                isPressing = true;
+                fart();
+            }
         }, { passive: false });
-
-        // Fallback for Desktop
-        canvas.addEventListener('click', (e) => {
-            if (gameOver) startGame();
-            else fart();
+        canvas.addEventListener('touchend', () => {
+            isPressing = false;
+            pressTimer = 0;
+            player.jumping = false;
         });
 
         // Start the Game
